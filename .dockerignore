@@ -1,0 +1,94 @@
+################################################################################
+# .dockerignore Configuration
+# Purpose: Specify which files and directories should be excluded from the
+# Docker build context to:
+# 1. Improve build performance
+# 2. Prevent sensitive information from being included in the image
+# 3. Avoid unnecessary cache invalidation
+# 4. Reduce the image size
+################################################################################
+
+# Configuration and Sensitive Files
+#--------------------------------------------------------------------------------
+# Exclude environment files to prevent secrets from being included in the image
+.env
+.env.*                    # All environment files (dev, prod, test, etc.)
+
+# Cryptographic and Authentication Files
+#--------------------------------------------------------------------------------
+# Prevent any kind of cryptographic keys from being included in the image
+*.pem                     # SSL/TLS certificates and private keys
+.oci/                    # Oracle Cloud Infrastructure configuration and keys
+.ssh/                    # SSH keys and configurations
+
+# Version Control
+#--------------------------------------------------------------------------------
+# Exclude version control metadata to reduce context size and prevent unnecessary
+# cache invalidation during builds
+.git/                    # Git repository data
+.gitignore              # Git ignore patterns
+.svn/                   # Subversion repository data
+.hg/                    # Mercurial repository data
+
+# Documentation
+#--------------------------------------------------------------------------------
+# Documentation files are not needed in the runtime environment
+*.md                     # Markdown files
+LICENSE                  # License files
+docs/                    # Documentation directory
+*.txt                    # Text documentation
+*.pdf                    # PDF documentation
+
+# Docker-specific Files
+#--------------------------------------------------------------------------------
+# Avoid recursive copying of Docker-related files
+*.yml                    # Docker Compose, Kubernetes manifests, etc.
+*.yaml                   # Alternative extension for YAML files
+.docker/                 # Docker configuration directory
+Dockerfile*             # All Dockerfile variants
+docker-compose*         # All docker-compose files
+
+# Logs and Temporary Files
+#--------------------------------------------------------------------------------
+# Exclude files that should not be part of the image and are regenerated
+*.log                    # Log files
+tmp/                     # Temporary directory
+temp/                    # Alternative temporary directory
+*.tmp                    # Temporary files
+
+# Backup Files
+#--------------------------------------------------------------------------------
+# Exclude backup files created by editors and systems
+*.bak                    # Generic backup files
+*~                       # Temporary files created by editors
+*.swp                    # Vim swap files
+*.swo                    # Vim swap files
+.DS_Store               # macOS system files
+Thumbs.db               # Windows thumbnail cache
+
+# Development Tools and IDE Files
+#--------------------------------------------------------------------------------
+# Exclude IDE-specific files and development tools
+.idea/                  # JetBrains IDE directory
+.vscode/               # Visual Studio Code directory
+*.sublime-*            # Sublime Text files
+.project               # Eclipse project files
+.settings/             # IDE settings directories
+node_modules/          # NPM dependencies
+__pycache__/          # Python bytecode cache
+*.pyc                  # Python compiled files
+
+# Testing and Coverage
+#--------------------------------------------------------------------------------
+# Exclude test files and coverage reports
+test/                   # Test directories
+tests/                  # Alternative test directory name
+coverage/              # Coverage reports
+.coverage              # Coverage data file
+htmlcov/               # HTML coverage reports
+
+################################################################################
+# Note: Each entry in this file prevents the matching files from being sent to
+# the Docker daemon during 'docker build'. This improves build performance and
+# security by excluding unnecessary or sensitive files.
+################################################################################

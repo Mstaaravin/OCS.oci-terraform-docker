@@ -1,0 +1,70 @@
+################################################################################
+# Docker Compose Configuration for OCI Terraform Development Environment
+################################################################################
+# Author: [Marvin] Carlos Miranda Molina
+# Created: February 2025
+# Last Modified: February 11, 2025
+#
+# Description:
+# Defines a containerized development environment for Oracle Cloud Infrastructure
+# using Terraform. This configuration ensures consistent permissions and access
+# to required resources across host and container.
+#
+# Prerequisites:
+# - Docker Engine
+# - Valid OCI credentials
+#
+# Installation:
+# 1. cp .env.example .env
+# 2. Configure credentials in .env:
+#    - Required: TF_VAR_TENANCY_OCID, TF_VAR_USER_OCID, TF_VAR_FINGERPRINT
+#    - Optional: TF_VAR_REGION (default: sa-bogota-1), TF_VAR_PRIVATE_KEY_PATH
+# 3. mkdir -p ${HOME}/Projects/customer01/{.oci,.ssh}
+# 4. docker compose up -d
+################################################################################
+---
+services:
+  container01:
+    image: ocs-oci-terraform:latest
+    build:
+      context: .
+      args:
+        USER_NAME: ${USER}
+        USER_UID: ${UID:-1000}
+        USER_GID: ${GID:-1000}
+    container_name: container01
+    hostname: container01
+    user: ${USER}:${USER}
+    stdin_open: true
+    tty: true
+    env_file:
+      - .env
+    volumes:
+      # Map Project's customer01 to inside container as a ~/home for consistent environment (need exists before start container)
+      - ${HOME}/Projects/customer01:/home/${USER}
+
+      # Editor settings (read-only) (need exists before start container) uncomment if you use nano or vim
+      # - ${HOME}/Projects/global/.nanorc:/home/${USER}/.nanorc:ro
+      # - ${HOME}/Projects/global/.vim:/home/${USER}/.vim:ro
+      # - ${HOME}/Projects/global/.vimrc:/home/${USER}/.vimrc:ro
+
+      # Persistent custom-specific shell configuration where you can define alias, exports, etc per container
+      # files in path ${HOME}/Projects/customer01 need exists before start container
+      - ${HOME}/Projects/customer01/.bashrc:/home/${USER}/.bashrc
+
+      # OCI authentication and configuration, need to be generated on OCI console and don't be needed if this source path are inside ${HOME}/Projects/customer01
+      - ${HOME}/Projects/customer01/.oci:/home/${USER}/.oci 
+
+      # SSH credentials and don't be needed if this source path are inside ${HOME}/Projects/customer01
+      - ${HOME}/Projects/customer01/.ssh:/home/${USER}/.ssh
+
+      # Landing Zone infrastructure code for customer01 Project, code and files for that repository can be managed outside and inside container
+      - ${HOME}/Projects/customer01/git.LZSPOKE:/home/${USER}/git.terraform
+    restart: unless-stopped
+
+################################################################################
+# Security Notes:
+# - Container runs as non-root user
+# - Sensitive data in volume mounts and .env (not version controlled) rename .env.example to .env
+# - Read-only mounts where appropriate
+################################################################################
