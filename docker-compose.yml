@@ -58,8 +58,8 @@ services:
       # SSH credentials and don't be needed if this source path are inside ${HOME}/Projects/customer01
       - ${HOME}/Projects/customer01/.ssh:/home/${USER}/.ssh
 
-      # Landing Zone infrastructure code for customer01 Project, code and files for that repository can be managed outside and inside container
-      - ${HOME}/Projects/customer01/git.LZSPOKE:/home/${USER}/git.terraform
+      # OPTIONAL: Landing Zone infrastructure code for customer01 Project, code and files for that repository can be managed outside and inside container
+      # - ${HOME}/Projects/customer01/git.LZSPOKE:/home/${USER}/git.terraform 
     restart: unless-stopped
 
 ################################################################################
