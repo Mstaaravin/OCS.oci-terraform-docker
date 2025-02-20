@@ -1,14 +1,15 @@
 ################################################################################
 # Stage 1: Builder for OCI CLI
-FROM python:3.12-alpine as builder
+FROM python:3.12-alpine AS builder
 
 # Set OCI CLI version for reproducible builds
 ARG OCI_CLI_VERSION=3.51.6
 
-# Create Python virtual environment and install OCI CLI
+# Create and populate virtual environment
 RUN python -m venv /opt/venv && \
-    /opt/venv/bin/pip install --no-cache-dir --only-binary :all: "oci-cli==${OCI_CLI_VERSION}"
+    /opt/venv/bin/pip install --no-cache-dir "oci-cli==${OCI_CLI_VERSION}"
 
+################################################################################
 # Stage 2: Final image
 FROM hashicorp/terraform:latest
 
@@ -44,7 +45,7 @@ RUN apk add --no-cache \
         nano \
         vim
 
-# Copy virtual environment from builder (no need to change ownership)
+# Copy virtual environment from builder
 COPY --from=builder /opt/venv /opt/venv
 
 # Create and set permissions for home directory structure
