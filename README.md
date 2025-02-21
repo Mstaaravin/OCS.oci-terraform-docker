@@ -17,6 +17,7 @@ This toolkit provides a pre-configured Docker environment that bundles essential
   - [Core Components](#core-components)
   - [Development Utilities](#development-utilities)
 - [Requirements](#requirements)
+- [Build Perfomance](#build-performance)
 - [Quick Start](#quick-start)
 - [Multi-tenant Support](#multi-tenant-support)
 - [Configuration](#configuration)
@@ -91,6 +92,32 @@ The toolkit automatically detects and uses your local user's UID and GID when bu
    # Create base directory structure
    mkdir -p ~/Projects/{customer01,customer02,customer03}
    ```
+
+## Build Performance & Behavior
+
+The Dockerfile is optimized for build performance using multi-stage builds and efficient layer caching:
+
+### Build Times
+- Initial build: ~80-90 seconds
+  * Downloads and installs all required dependencies
+  * Creates Python virtual environment
+  * Installs OCI CLI and its dependencies
+
+- Subsequent builds: <1 second
+  * Uses cached layers
+  * Only rebuilds modified layers
+  * Maintains all other cached components
+
+### Version Changes
+When changing OCI CLI version, only the installation layer will be rebuilt while maintaining other cached layers:
+```bash
+docker build \
+  --build-arg USER_NAME=$(whoami) \
+  --build-arg USER_UID=$(id -u) \
+  --build-arg USER_GID=$(id -g) \
+  --build-arg OCI_CLI_VERSION=<new_version> \
+  -t ocs-oci-terraform:<new_version>
+  ```
 
 ## Quick Start
 
