@@ -12,12 +12,13 @@ This toolkit provides a pre-configured Docker environment that bundles essential
 - [Overview](#overview)
 - [Key Features](#key-features)
   - [Permission Management](#permission-management)
+- [Image Options](#image-options)
 - [Included Tools](#included-tools)
-  - [Base Image](#base-image)
+  - [Base Images](#base-images)
   - [Core Components](#core-components)
   - [Development Utilities](#development-utilities)
 - [Requirements](#requirements)
-- [Build Perfomance](#build-performance)
+- [Build Performance](#build-performance)
 - [Quick Start](#quick-start)
 - [Multi-tenant Support](#multi-tenant-support)
 - [Configuration](#configuration)
@@ -48,15 +49,69 @@ The toolkit automatically detects and uses your local user's UID and GID when bu
 - Seamless access to mounted volumes
 - Secure non-root execution
 
+## Image Options
+
+The toolkit provides two different base image options to choose from:
+
+### HashiCorp Terraform Alpine (Default)
+- Uses `hashicorp/terraform:latest` (Based on Alpine Linux)
+- Smaller image size (Alpine-based)
+- Pre-installed Terraform
+- Dockerfile: `Dockerfile.hashicorp`
+
+### Oracle Linux 9 Slim
+- Uses `oraclelinux:9-slim`
+- Oracle Linux compatibility
+- Manually installed latest Terraform
+- Dockerfile: `Dockerfile.oracle`
+
+To build with a specific Dockerfile:
+```bash
+# For HashiCorp Terraform Alpine base
+docker build -f Dockerfile.hashicorp \
+  --build-arg USER_NAME=$(whoami) \
+  --build-arg USER_UID=$(id -u) \
+  --build-arg USER_GID=$(id -g) \
+  -t ocs-oci-terraform:hashicorp .
+
+# For Oracle Linux 9 Slim base
+docker build -f Dockerfile.oracle \
+  --build-arg USER_NAME=$(whoami) \
+  --build-arg USER_UID=$(id -u) \
+  --build-arg USER_GID=$(id -g) \
+  -t ocs-oci-terraform:oracle .
+```
+
+To use a specific image with docker-compose, modify the `docker-compose.yml` file:
+```yaml
+services:
+  container03:
+    image: ocs-oci-terraform:hashicorp  # or ocs-oci-terraform:oracle
+    build:
+      context: .
+      dockerfile: Dockerfile.hashicorp  # or Dockerfile.oracle
+      args:
+        USER_NAME: ${USER}
+        USER_UID: ${UID:-1000}
+        USER_GID: ${GID:-1000}
+        OCI_CLI_VERSION: ${OCI_CLI_VERSION:-3.51.8}
+```
+
 ## Included Tools
 
-### Base Image
-- `hashicorp/terraform:latest` (Based on Alpine Linux)
-- Lightweight and secure base system
-- Official HashiCorp maintained image
+### Base Images
+- HashiCorp Terraform Alpine (Default)
+  - Lightweight and secure Alpine Linux base
+  - Official HashiCorp maintained image
+- Oracle Linux 9 Slim
+  - Enterprise-grade base OS
+  - Oracle compatibility
+  - Explicit Terraform installation (version 1.7.5)
 
 ### Core Components
-- Terraform (Latest version from hashicorp/terraform)
+- Terraform
+  - Latest version from hashicorp/terraform (in Alpine variant)
+  - Version 1.7.5 (in Oracle Linux variant)
 - OCI CLI 3.51.6
 - Python 3.x
 
@@ -95,7 +150,7 @@ The toolkit automatically detects and uses your local user's UID and GID when bu
 
 ## Build Performance & Behavior
 
-The Dockerfile is optimized for build performance using multi-stage builds and efficient layer caching:
+The Dockerfiles are optimized for build performance using efficient layer caching:
 
 ### Build Times
 - Initial build: ~80-90 seconds
@@ -112,16 +167,21 @@ The Dockerfile is optimized for build performance using multi-stage builds and e
 When changing OCI CLI version, only the installation layer will be rebuilt while maintaining other cached layers:
 ```bash
 docker build \
+  -f Dockerfile.hashicorp \  # or Dockerfile.oracle
   --build-arg USER_NAME=$(whoami) \
   --build-arg USER_UID=$(id -u) \
   --build-arg USER_GID=$(id -g) \
   --build-arg OCI_CLI_VERSION=<new_version> \
-  -t ocs-oci-terraform:<new_version>
+  -t ocs-oci-terraform:<base>-<new_version>
   ```
 
 ## Quick Start
 
-1. **Generate Required Credentials**
+1. **Choose Base Image**
+   - Decide which base image to use (HashiCorp Terraform Alpine or Oracle Linux 9 Slim)
+   - Update the `docker-compose.yml` file accordingly
+
+2. **Generate Required Credentials**
    - Generate SSH keys: [OCI SSH Key Generation Guide](https://docs.oracle.com/en-us/iaas/Content/GSG/Tasks/creatingkeys.htm)
    ```bash
    # [HOST] Generate SSH key pair
@@ -135,7 +195,7 @@ docker build \
    openssl rsa -pubout -in ${HOME}/Projects/customer01/.oci/oci_api_key.pem -out ${HOME}/Projects/customer01/.oci/oci_api_key_public.pem
    ```
 
-2. **Prepare Directory Structure**
+3. **Prepare Directory Structure**
    ```bash
    # [HOST] Create required directory structure
    mkdir -p ${HOME}/Projects/customer01/{.oci,.ssh}
@@ -146,14 +206,14 @@ docker build \
    ```
    Note: We use ${HOME}/Projects/customer01 as an example path in the docker host that will be mounted as ~/ in the container.
 
-3. **Configure Environment**
+4. **Configure Environment**
    ```bash
-   # [HOST] able .env file before start container
+   # [HOST] Copy .env file before start container
    cp .env.example .env
    # Edit .env with your OCI credentials
    ```
 
-4. **Launch Toolkit**
+5. **Launch Toolkit**
    ```bash
    docker compose up -d
    ```
@@ -209,12 +269,12 @@ You can create similar directories for different customers and modify the volume
 .
 ├── doc                    # Some documentation files and images
 ├── .bashrc                # .bashrc example for use inside container
-├── Dockerfile             # Toolkit image definition
+├── Dockerfile.hashicorp   # HashiCorp Terraform Alpine image definition
+├── Dockerfile.oracle      # Oracle Linux 9 image definition  
 ├── docker-compose.yml     # Container orchestration
 ├── entrypoint.sh          # Initialization script
 ├── .env.example           # Environment template
 └── README.md              # Documentation
-
 ```
 
 ## Container Information
@@ -232,7 +292,7 @@ When the container starts, the entrypoint script displays comprehensive informat
 
 Access the toolkit environment:
 ```bash
-docker exec -it container01 bash
+docker exec -it container03 bash
 ```
 
 Common operations:

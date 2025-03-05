@@ -1,6 +1,10 @@
 # Frequently Asked Questions (FAQ)
 
 ## Table of Contents
+- [Image Selection](#image-selection)
+  - [Which base image should I choose?](#q-which-base-image-should-i-choose)
+  - [How to switch between images?](#q-how-do-i-switch-between-the-hashicorp-terraform-and-oracle-linux-images)
+  - [Version differences](#q-what-are-the-version-differences-between-the-two-images)
 - [Container Setup](#container-setup)
   - [User not found when starting container](#q-why-cant-docker-find-my-user-when-starting-the-container)
   - [Recreating container after .bashrc modifications](#q-do-i-need-to-recreate-the-container-after-modifying-my-bashrc)
@@ -20,6 +24,37 @@
 - [Performance](#performance)
   - [WSL impact](#q-is-there-a-performance-impact-using-wsl)
   - [Memory consumption](#q-will-the-container-consume-too-much-memory)
+
+## Image Selection
+
+### Q: Which base image should I choose?
+**A:** Choose based on your specific needs:
+- **HashiCorp Terraform Alpine** (`Dockerfile.hashicorp`): Smaller, lighter container based on Alpine Linux. Best for most development scenarios where minimal resource usage is important.
+- **Oracle Linux 9 Slim** (`Dockerfile.oracle`): Better compatibility with Oracle environments. Choose this if you're working extensively with Oracle products or need specific Oracle Linux packages.
+
+### Q: How do I switch between the HashiCorp Terraform and Oracle Linux images?
+**A:** You can switch by modifying your docker-compose.yml file:
+
+```yaml
+services:
+  container03:
+    build:
+      context: .
+      dockerfile: Dockerfile.hashicorp  # Change to Dockerfile.oracle for Oracle Linux
+```
+
+Then rebuild and restart:
+```bash
+docker compose down
+docker compose up -d --build
+```
+
+### Q: What are the version differences between the two images?
+**A:** The main differences are:
+- **HashiCorp Terraform Alpine**: Uses the latest Terraform version from HashiCorp's official image
+- **Oracle Linux 9 Slim**: Explicitly installs Terraform 1.7.5 (this version can be changed via the `TERRAFORM_VERSION` build arg)
+
+Both images use the same OCI CLI version as specified in the build arguments.
 
 ## Container Setup
 
@@ -105,12 +140,18 @@ FileNotFoundError: [Errno 2] No such file or directory: '~/.oci/tenancyName.pem'
 ## Development
 
 ### Q: Can I install additional tools in the container?
-**A:** Yes, but they won't persist after container restart. Add them to the Dockerfile for persistence.
+**A:** Yes, but they won't persist after container restart. Add them to the appropriate Dockerfile for persistence.
 
 ### Q: How do I update Terraform/OCI CLI versions?
-**A:** Update the version tags in the Dockerfile and rebuild:
+**A:** For the Oracle Linux image, update the version tags in the Dockerfile.oracle file:
+```dockerfile
+ARG OCI_CLI_VERSION=3.52
+ARG TERRAFORM_VERSION=1.7.5
+```
+
+For the HashiCorp image, Terraform version is controlled by the base image tag. To update OCI CLI version:
 ```bash
-docker compose build --no-cache
+docker compose build --build-arg OCI_CLI_VERSION=<new_version> --no-cache
 ```
 
 ## Troubleshooting
@@ -139,8 +180,11 @@ mount | grep home
 - Use WSL2 instead of WSL1
 
 ### Q: Will the container consume too much memory?
-**A:** The container is lightweight. Monitor usage with:
+**A:** The containers are designed to be lightweight. The Oracle Linux image may be slightly larger than the Alpine-based image. Monitor usage with:
 ```bash
 # [HOST] Check container resources
-docker stats container01
+docker stats container03
 ```
+
+### Q: Is there a performance difference between the two base images?
+**A:** The HashiCorp Alpine image is generally smaller and uses fewer resources, but the Oracle Linux image may have better compatibility with Oracle Cloud Infrastructure tools. For most development tasks, you won't notice significant performance differences.
