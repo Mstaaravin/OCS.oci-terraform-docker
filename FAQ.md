@@ -25,36 +25,33 @@
   - [WSL impact](#q-is-there-a-performance-impact-using-wsl)
   - [Memory consumption](#q-will-the-container-consume-too-much-memory)
 
-## Image Selection
+## Image Information
 
-### Q: Which base image should I choose?
-**A:** Choose based on your specific needs:
-- **HashiCorp Terraform Alpine** (`Dockerfile.hashicorp`): Smaller, lighter container based on Alpine Linux. Best for most development scenarios where minimal resource usage is important.
-- **Oracle Linux 9 Slim** (`Dockerfile.oracle`): Better compatibility with Oracle environments. Choose this if you're working extensively with Oracle products or need specific Oracle Linux packages.
+### Q: Why Oracle Linux 9 Slim instead of Alpine Linux?
+**A:** Oracle Linux 9 Slim provides several advantages:
+- Direct compatibility with OCI Cloud Shell environment
+- Better support for Oracle-specific tools and utilities
+- Enterprise-grade base OS with predictable behavior
+- More familiar environment for OCI developers
 
-### Q: How do I switch between the HashiCorp Terraform and Oracle Linux images?
-**A:** You can switch by modifying your docker-compose.yml file:
+### Q: Can I change the Terraform version?
+**A:** Yes, you can modify the Terraform version by changing the `TERRAFORM_VERSION` build argument in the Dockerfile9 or when building:
 
-```yaml
-services:
-  container03:
-    build:
-      context: .
-      dockerfile: Dockerfile.hashicorp  # Change to Dockerfile.oracle for Oracle Linux
-```
-
-Then rebuild and restart:
 ```bash
-docker compose down
-docker compose up -d --build
+docker build -f Dockerfile9 \
+  --build-arg USER_NAME=$(whoami) \
+  --build-arg USER_UID=$(id -u) \
+  --build-arg USER_GID=$(id -g) \
+  --build-arg TERRAFORM_VERSION=1.8.0 \
+  -t ocs-oci-terraform:latest .
 ```
 
-### Q: What are the version differences between the two images?
-**A:** The main differences are:
-- **HashiCorp Terraform Alpine**: Uses the latest Terraform version from HashiCorp's official image
-- **Oracle Linux 9 Slim**: Explicitly installs Terraform 1.7.5 (this version can be changed via the `TERRAFORM_VERSION` build arg)
-
-Both images use the same OCI CLI version as specified in the build arguments.
+### Q: How does this compare to OCI Cloud Shell?
+**A:** This container closely resembles the OCI Cloud Shell experience with these advantages:
+- Persistent environment that saves your configurations
+- Full customization of tools and versions
+- Ability to run locally without network constraints
+- Direct access to local files and resources
 
 ## Container Setup
 
@@ -143,15 +140,15 @@ FileNotFoundError: [Errno 2] No such file or directory: '~/.oci/tenancyName.pem'
 **A:** Yes, but they won't persist after container restart. Add them to the appropriate Dockerfile for persistence.
 
 ### Q: How do I update Terraform/OCI CLI versions?
-**A:** For the Oracle Linux image, update the version tags in the Dockerfile.oracle file:
+**A:** Update the version tags in the Dockerfile9 file:
 ```dockerfile
 ARG OCI_CLI_VERSION=3.52
 ARG TERRAFORM_VERSION=1.7.5
 ```
 
-For the HashiCorp image, Terraform version is controlled by the base image tag. To update OCI CLI version:
+Alternatively, specify the versions when building:
 ```bash
-docker compose build --build-arg OCI_CLI_VERSION=<new_version> --no-cache
+docker compose build --build-arg OCI_CLI_VERSION=<new_version> --build-arg TERRAFORM_VERSION=<new_version> --no-cache
 ```
 
 ## Troubleshooting
@@ -186,5 +183,5 @@ mount | grep home
 docker stats container03
 ```
 
-### Q: Is there a performance difference between the two base images?
-**A:** The HashiCorp Alpine image is generally smaller and uses fewer resources, but the Oracle Linux image may have better compatibility with Oracle Cloud Infrastructure tools. For most development tasks, you won't notice significant performance differences.
+### Q: Is Oracle Linux 9 Slim resource-intensive?
+**A:** While Oracle Linux 9 Slim is slightly larger than Alpine-based images, it's still optimized for container use and provides a good balance between compatibility and resource usage. The image has been optimized to include only necessary components for OCI development.

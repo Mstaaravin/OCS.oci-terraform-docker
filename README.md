@@ -8,6 +8,8 @@ Need help? Check out our detailed [FAQ](FAQ.md) for common questions and solutio
 
 This toolkit provides a pre-configured Docker environment that bundles essential tools and utilities for OCI infrastructure development. It's designed for seamless integration with Terraform workflows and OCI management tasks. It maintains bash history and persistence, includes a basic ~/.bashrc configuration with colorized $PS1, and integrates easy git branch identification for quick workspace recognition.
 
+>**This container image is essentially the OCI Cloud Shell experience brought to your own machine.** It provides the same tools, utilities, and workflow capabilities as the OCI console's Cloud Shell, but with the advantages of persistence, customization, and local access.
+
 ## Table of Contents
 - [Overview](#overview)
 - [Key Features](#key-features)
@@ -49,47 +51,32 @@ The toolkit automatically detects and uses your local user's UID and GID when bu
 - Seamless access to mounted volumes
 - Secure non-root execution
 
-## Image Options
+## Base Image
 
-The toolkit provides two different base image options to choose from:
+The toolkit uses Oracle Linux 9 Slim as its base, providing compatibility with OCI Cloud Shell environment:
 
-### HashiCorp Terraform Alpine (Default)
-- Uses `hashicorp/terraform:latest` (Based on Alpine Linux)
-- Smaller image size (Alpine-based)
-- Pre-installed Terraform
-- Dockerfile: `Dockerfile.hashicorp`
+- Uses `oraclelinux:9-slim` as the foundation
+- Oracle Linux compatibility for consistent OCI experience
+- Pre-installed Terraform (version 1.7.5)
+- Dockerfile: `Dockerfile9`
 
-### Oracle Linux 9 Slim
-- Uses `oraclelinux:9-slim`
-- Oracle Linux compatibility
-- Manually installed latest Terraform
-- Dockerfile: `Dockerfile.oracle`
-
-To build with a specific Dockerfile:
+To build the image:
 ```bash
-# For HashiCorp Terraform Alpine base
-docker build -f Dockerfile.hashicorp \
+docker build -f Dockerfile9 \
   --build-arg USER_NAME=$(whoami) \
   --build-arg USER_UID=$(id -u) \
   --build-arg USER_GID=$(id -g) \
-  -t ocs-oci-terraform:hashicorp .
-
-# For Oracle Linux 9 Slim base
-docker build -f Dockerfile.oracle \
-  --build-arg USER_NAME=$(whoami) \
-  --build-arg USER_UID=$(id -u) \
-  --build-arg USER_GID=$(id -g) \
-  -t ocs-oci-terraform:oracle .
+  -t ocs-oci-terraform:latest .
 ```
 
-To use a specific image with docker-compose, modify the `docker-compose.yml` file:
+The docker-compose.yml file is configured to use this image:
 ```yaml
 services:
   container03:
-    image: ocs-oci-terraform:hashicorp  # or ocs-oci-terraform:oracle
+    image: ocs-oci-terraform:3.51.8
     build:
       context: .
-      dockerfile: Dockerfile.hashicorp  # or Dockerfile.oracle
+      dockerfile: Dockerfile9
       args:
         USER_NAME: ${USER}
         USER_UID: ${UID:-1000}
@@ -99,13 +86,11 @@ services:
 
 ## Included Tools
 
-### Base Images
-- HashiCorp Terraform Alpine (Default)
-  - Lightweight and secure Alpine Linux base
-  - Official HashiCorp maintained image
+### Base Image
 - Oracle Linux 9 Slim
   - Enterprise-grade base OS
-  - Oracle compatibility
+  - Direct compatibility with OCI Cloud Shell
+  - Oracle-optimized environment
   - Explicit Terraform installation (version 1.7.5)
 
 ### Core Components
@@ -177,9 +162,9 @@ docker build \
 
 ## Quick Start
 
-1. **Choose Base Image**
-   - Decide which base image to use (HashiCorp Terraform Alpine or Oracle Linux 9 Slim)
-   - Update the `docker-compose.yml` file accordingly
+1. **Verify Configuration**
+   - Check that the `docker-compose.yml` file is using the Dockerfile9
+   - Make sure your environment is ready for Oracle Linux 9 based image
 
 2. **Generate Required Credentials**
    - Generate SSH keys: [OCI SSH Key Generation Guide](https://docs.oracle.com/en-us/iaas/Content/GSG/Tasks/creatingkeys.htm)
@@ -269,8 +254,7 @@ You can create similar directories for different customers and modify the volume
 .
 ├── doc                    # Some documentation files and images
 ├── .bashrc                # .bashrc example for use inside container
-├── Dockerfile.hashicorp   # HashiCorp Terraform Alpine image definition
-├── Dockerfile.oracle      # Oracle Linux 9 image definition  
+├── Dockerfile9            # Oracle Linux 9 image definition  
 ├── docker-compose.yml     # Container orchestration
 ├── entrypoint.sh          # Initialization script
 ├── .env.example           # Environment template
