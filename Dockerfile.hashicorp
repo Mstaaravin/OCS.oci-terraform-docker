@@ -33,7 +33,7 @@ ARG USER_UID
 ARG USER_GID
 
 # Set OCI CLI version for reproducible builds
-ARG OCI_CLI_VERSION=3.51.6
+ARG OCI_CLI_VERSION=3.52
 
 # Configure Python environment
 ENV PYTHONUNBUFFERED=1 \

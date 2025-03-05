@@ -25,17 +25,17 @@
 ---
 services:
  
-  container01:
-    image: ocs-oci-terraform:3.51.6
+  container03:
+    image: ocs-oci-terraform:3.51.8
     build:
       context: .
       args:
         USER_NAME: ${USER}
         USER_UID: ${UID:-1000}
         USER_GID: ${GID:-1000}
-        OCI_CLI_VERSION: ${OCI_CLI_VERSION:-3.51.6}
-    container_name: container01
-    hostname: container01
+        OCI_CLI_VERSION: ${OCI_CLI_VERSION:-3.51.8}
+    container_name: container03
+    hostname: container03
     user: ${USER}:${USER}
     stdin_open: true
     tty: true
@@ -63,6 +63,8 @@ services:
       # OPTIONAL: Landing Zone infrastructure code for customer01 Project, code and files for that repository can be managed outside and inside container
       # - ${HOME}/Projects/customer01/git.LZSPOKE:/home/${USER}/git.terraform 
     restart: unless-stopped
+
+
 
 ################################################################################
 # Security Notes:
