@@ -8,7 +8,7 @@ Need help? Check out our detailed [FAQ](FAQ.md) for common questions and solutio
 
 This toolkit provides a pre-configured Docker environment that bundles essential tools and utilities for OCI infrastructure development. It's designed for seamless integration with Terraform workflows and OCI management tasks. It maintains bash history and persistence, includes a basic ~/.bashrc configuration with colorized $PS1, and integrates easy git branch identification for quick workspace recognition.
 
->**This container image is essentially the OCI Cloud Shell experience brought to your own machine.** It provides the same tools, utilities, and workflow capabilities as the OCI console's Cloud Shell, but with the advantages of persistence, customization, and local access.
+>**This container image is essentially the OCI Cloud Shell experience brought to your own machine.** It provides almost the same tools, utilities, and workflow capabilities as the OCI console's Cloud Shell, but with the advantages of persistence, customization, and local access.
 
 ## Table of Contents
 - [Overview](#overview)

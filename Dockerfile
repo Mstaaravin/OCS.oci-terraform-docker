@@ -13,7 +13,7 @@
 # Key Components:
 # - Base Image: oraclelinux:9-slim
 # - Terraform (latest version)
-# - Python 3.x with OCI CLI 3.52
+# - Python 3.11 with OCI CLI 3.52
 # - Development tools: git, jq, nano, vim
 # - User configuration with dynamic UID/GID mapping
 # - Security-focused configuration with non-root user
@@ -22,7 +22,7 @@
 # Build with: docker build --build-arg USER_NAME=$(whoami) \
 #                         --build-arg USER_UID=$(id -u) \
 #                         --build-arg USER_GID=$(id -g) \
-#                         -f Dockerfile.oracle \
+#                         -f Dockerfile9 \
 #                         -t ocs-oci-terraform-ol:latest .
 ################################################################################
 
@@ -38,19 +38,22 @@ ARG USER_GID
 ARG OCI_CLI_VERSION=3.52
 # Set Terraform version for reproducible builds
 ARG TERRAFORM_VERSION=1.11.0
+# Set Python version
+ARG PYTHON_VERSION=3.12
 
 # Configure environment variables
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PATH="/opt/venv/bin:/usr/local/bin:$PATH" \
     OCI_CLI_VERSION=${OCI_CLI_VERSION} \
-    TERRAFORM_VERSION=${TERRAFORM_VERSION}
+    TERRAFORM_VERSION=${TERRAFORM_VERSION} \
+    PYTHON_VERSION=${PYTHON_VERSION}
 
-# Install required packages
+# Install basic required packages
 RUN microdnf update -y && \
     microdnf install -y \
+        dnf \
         python3 \
-        python3-pip \
         unzip \
         tar \
         gzip \
@@ -67,6 +70,18 @@ RUN microdnf update -y && \
         shadow-utils \
         which && \
     microdnf clean all
+
+# Install Python 3.11 from Oracle's CodeReady Builder repo
+RUN dnf install -y dnf-plugins-core oraclelinux-release-el9 && \
+    dnf config-manager --set-enabled ol9_codeready_builder && \
+    dnf install -y \
+        python${PYTHON_VERSION} \
+        python${PYTHON_VERSION}-pip \
+        python${PYTHON_VERSION}-devel && \
+    # Create symlinks to make python3 use the specified version
+    ln -sf /usr/bin/python${PYTHON_VERSION} /usr/bin/python3 && \
+    ln -sf /usr/bin/pip${PYTHON_VERSION} /usr/bin/pip3 && \
+    dnf clean all
 
 # Set up Python virtual environment for OCI CLI
 RUN python3 -m venv /opt/venv && \
