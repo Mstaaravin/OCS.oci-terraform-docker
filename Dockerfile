@@ -22,8 +22,8 @@
 # Build with: docker build --build-arg USER_NAME=$(whoami) \
 #                         --build-arg USER_UID=$(id -u) \
 #                         --build-arg USER_GID=$(id -g) \
-#                         -f Dockerfile9 \
-#                         -t ocs-oci-terraform-ol:latest .
+#                         -f Dockerfile \
+#                         -t ocs-oci-terraform-ol9:latest .
 ################################################################################
 
 # Use Oracle Linux 9 slim as base
@@ -35,10 +35,17 @@ ARG USER_UID
 ARG USER_GID
 
 # Set OCI CLI version for reproducible builds
-ARG OCI_CLI_VERSION=3.52
+# https://github.com/oracle/oci-cli/releases
+ARG OCI_CLI_VERSION=3.54.3
+
 # Set Terraform version for reproducible builds
-ARG TERRAFORM_VERSION=1.11.0
+# https://github.com/hashicorp/terraform/releases
+# https://releases.hashicorp.com/terraform
+ARG TERRAFORM_VERSION=1.11.4
+
 # Set Python version
+# https://yum.oracle.com/oracle-linux-python.html
+# https://docs.oracle.com/en/operating-systems/oracle-linux/9/python/python-InstallingPython.html#installing-python3
 ARG PYTHON_VERSION=3.12
 
 # Configure environment variables

@@ -24,16 +24,16 @@
 ################################################################################
 ---
 services:
- 
+
   container03:
-    image: ocs-oci-terraform:3.51.8
+    image: ocs-oci-terraform:3.54.3
     build:
       context: .
       args:
         USER_NAME: ${USER}
         USER_UID: ${UID:-1000}
         USER_GID: ${GID:-1000}
-        OCI_CLI_VERSION: ${OCI_CLI_VERSION:-3.51.8}
+        OCI_CLI_VERSION: ${OCI_CLI_VERSION:-3.54.3}
     container_name: container03
     hostname: container03
     user: ${USER}:${USER}
