@@ -57,12 +57,12 @@ The toolkit uses Oracle Linux 9 Slim as its base, providing compatibility with O
 
 - Uses `oraclelinux:9-slim` as the foundation
 - Oracle Linux compatibility for consistent OCI experience
-- Pre-installed Terraform (version 1.7.5)
-- Dockerfile: `Dockerfile9`
+- Pre-installed Terraform (version 1.11.4)
+- Dockerfile: `Dockerfile`
 
 To build the image:
 ```bash
-docker build -f Dockerfile9 \
+docker build -f Dockerfile \
   --build-arg USER_NAME=$(whoami) \
   --build-arg USER_UID=$(id -u) \
   --build-arg USER_GID=$(id -g) \
@@ -73,15 +73,15 @@ The docker-compose.yml file is configured to use this image:
 ```yaml
 services:
   container03:
-    image: ocs-oci-terraform:3.51.8
+    image: ocs-oci-terraform:latest
     build:
       context: .
-      dockerfile: Dockerfile9
+      dockerfile: Dockerfile
       args:
         USER_NAME: ${USER}
         USER_UID: ${UID:-1000}
         USER_GID: ${GID:-1000}
-        OCI_CLI_VERSION: ${OCI_CLI_VERSION:-3.51.8}
+        OCI_CLI_VERSION: ${OCI_CLI_VERSION:-3.54.3}
 ```
 
 ## Included Tools
@@ -91,14 +91,13 @@ services:
   - Enterprise-grade base OS
   - Direct compatibility with OCI Cloud Shell
   - Oracle-optimized environment
-  - Explicit Terraform installation (version 1.7.5)
+  - Explicit Terraform installation (version 1.11.4)
 
 ### Core Components
 - Terraform
-  - Latest version from hashicorp/terraform (in Alpine variant)
-  - Version 1.7.5 (in Oracle Linux variant)
-- OCI CLI 3.51.6
-- Python 3.x
+  - Version 1.11.4 (in Oracle Linux variant)
+- OCI CLI 3.54.3
+- Python 3.12.5
 
 ### Development Utilities
 - Git for version control
@@ -152,7 +151,7 @@ The Dockerfiles are optimized for build performance using efficient layer cachin
 When changing OCI CLI version, only the installation layer will be rebuilt while maintaining other cached layers:
 ```bash
 docker build \
-  -f Dockerfile.hashicorp \  # or Dockerfile.oracle
+  -f Dockerfile \
   --build-arg USER_NAME=$(whoami) \
   --build-arg USER_UID=$(id -u) \
   --build-arg USER_GID=$(id -g) \
@@ -254,7 +253,7 @@ You can create similar directories for different customers and modify the volume
 .
 ├── doc                    # Some documentation files and images
 ├── .bashrc                # .bashrc example for use inside container
-├── Dockerfile9            # Oracle Linux 9 image definition  
+├── Dockerfile            # Oracle Linux 9 image definition  
 ├── docker-compose.yml     # Container orchestration
 ├── entrypoint.sh          # Initialization script
 ├── .env.example           # Environment template

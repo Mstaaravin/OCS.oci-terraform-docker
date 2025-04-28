@@ -3,7 +3,7 @@
 ################################################################################
 # Author: [Marvin] Carlos Miranda Molina
 # Created: February 2025
-# Last Modified: March 05, 2025
+# Last Modified: April 27, 2025
 #
 # Description: 
 # This Dockerfile builds a development environment for Oracle Cloud Infrastructure
@@ -13,7 +13,7 @@
 # Key Components:
 # - Base Image: oraclelinux:9-slim
 # - Terraform (latest version)
-# - Python 3.11 with OCI CLI 3.52
+# - Python 3.11 with OCI CLI 3.54.x
 # - Development tools: git, jq, nano, vim
 # - User configuration with dynamic UID/GID mapping
 # - Security-focused configuration with non-root user
@@ -36,7 +36,7 @@ ARG USER_GID
 
 # Set OCI CLI version for reproducible builds
 # https://github.com/oracle/oci-cli/releases
-ARG OCI_CLI_VERSION=3.54.3
+ARG OCI_CLI_VERSION=3.54.4
 
 # Set Terraform version for reproducible builds
 # https://github.com/hashicorp/terraform/releases
@@ -78,7 +78,12 @@ RUN microdnf update -y && \
         which && \
     microdnf clean all
 
-# Install Python 3.11 from Oracle's CodeReady Builder repo
+# Install gosu (proper way to step down from root in Docker containers)
+RUN curl -sSL "https://github.com/tianon/gosu/releases/download/1.16/gosu-amd64" -o /usr/local/bin/gosu && \
+    chmod +x /usr/local/bin/gosu && \
+    gosu --version
+
+# Install Python from Oracle's CodeReady Builder repo
 RUN dnf install -y dnf-plugins-core oraclelinux-release-el9 && \
     dnf config-manager --set-enabled ol9_codeready_builder && \
     dnf install -y \
@@ -122,10 +127,7 @@ RUN mkdir -p /home/${USER_NAME}/.oci && \
 
 # Configure entrypoint
 COPY entrypoint.sh /usr/local/bin/
-RUN chmod +x /usr/local/bin/entrypoint.sh && \
-    if [ "${USER_UID:-0}" != "0" ]; then \
-        chown ${USER_NAME}:${USER_NAME} /usr/local/bin/entrypoint.sh; \
-    fi
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # Set bash as default shell
 SHELL ["/bin/bash", "-c"]
@@ -133,8 +135,9 @@ SHELL ["/bin/bash", "-c"]
 # Configure working directory
 WORKDIR /home/${USER_NAME}
 
-# Switch to non-root user
-USER ${USER_NAME}
+# Use root user by default to allow dynamic UID/GID changes
+# The entrypoint will switch to the appropriate user
+USER root
 
 # Set entrypoint and default command
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

@@ -4,6 +4,14 @@ case $- in
       *) return;;
 esac
 
+# Enable bash-completion
+if [ -f /usr/share/bash-completion/bash_completion ]; then
+    . /usr/share/bash-completion/bash_completion
+elif [ -f /etc/bash_completion ]; then
+    . /etc/bash_completion
+fi
+
+
 # Ensure .bash_history exists and is a file
 if [ ! -f ~/.bash_history ]; then
     touch ~/.bash_history
