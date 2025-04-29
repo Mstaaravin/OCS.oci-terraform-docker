@@ -6,14 +6,22 @@ Need help? Check out our detailed [FAQ](FAQ.md) for common questions and solutio
 
 ## Overview
 
-This toolkit provides a pre-configured Docker environment that bundles essential tools and utilities for OCI infrastructure development. It's designed for seamless integration with Terraform workflows and OCI management tasks. It maintains bash history and persistence, includes a basic ~/.bashrc configuration with colorized $PS1, and integrates easy git branch identification for quick workspace recognition.
+This toolkit provides a pre-configured Docker environment that bundles essential tools and utilities for OCI infrastructure development. **Its primary purpose is to isolate multiple OCI tenancies/accounts with separate configurations, credentials, and workspaces** - each container represents a distinct OCI environment, eliminating accidental cross-tenancy operations.
 
->**This container image is essentially the OCI Cloud Shell experience brought to your own machine.** It provides **almost** the same tools, utilities, and workflow capabilities as the OCI console's Cloud Shell, but with the advantages of persistence, customization, and local access.
+Key benefits:
+- **Tenant isolation**: Each container maintains its own OCI credentials and configurations
+- **Clean separation**: No more switching between config files or profiles for different tenancies
+- **Simplified management**: Each project directory represents a distinct OCI environment
+
+The toolkit maintains bash history and persistence, includes a basic ~/.bashrc configuration with colorized $PS1, and integrates easy git branch identification for quick workspace recognition.
+
+>**This container image is essentially the OCI Cloud Shell experience brought to your own machine.** It provides **almost** the same tools, utilities, and workflow capabilities as the OCI console's Cloud Shell, but with the advantages of persistence, customization, local access, and most importantly, **complete isolation between different OCI tenancies**.
 
 ## Table of Contents
 - [Overview](#overview)
 - [Key Features](#key-features)
   - [Permission Management](#permission-management)
+  - [Registry Compatibility](#registry-compatibility)
 - [Image Options](#image-options)
 - [Included Tools](#included-tools)
   - [Base Images](#base-images)
@@ -32,8 +40,7 @@ This toolkit provides a pre-configured Docker environment that bundles essential
 
 ## Key Features
 
-- Automated user permission mapping from host to container (UID/GID)
-- Dynamic user creation matching host credentials
+- **Dynamic UID/GID mapping** for host-container permission synchronization
 - Pre-installed and configured development tools (nano, vim, rsync, etc)
 - Integrated OCI and Terraform workflows
 - Secure credential management
@@ -45,11 +52,32 @@ This toolkit provides a pre-configured Docker environment that bundles essential
 
 ### Permission Management
 
-The toolkit automatically detects and uses your local user's UID and GID when building the image and creating containers. This means:
+The toolkit provides two layers of user permission management:
+
+1. **Build-time UID/GID mapping**:
+   - During image build, uses your local user's UID and GID
+   - Creates a user in the container that matches your host user
+
+2. **Runtime UID/GID mapping**:
+   - When running a pre-built image (from a registry), dynamically adjusts to the current user
+   - Uses environment variables PUID and PGID to match container user with host user
+   - Implemented with gosu for proper privilege de-escalation
+
+This dual approach means:
 - No permission conflicts between host and container
 - Files created in the container match your host user permissions
 - Seamless access to mounted volumes
 - Secure non-root execution
+- **Registry-friendly images** that work across different systems
+
+### Registry Compatibility
+
+A key improvement in this toolkit is the ability to share images via registries without permission problems:
+
+- Images built locally can be pushed to a registry
+- Other users can pull and run these images with their own UID/GID
+- No need to rebuild images for different users
+- Container automatically adapts to the host user at runtime
 
 ## Base Image
 
@@ -81,7 +109,13 @@ services:
         USER_NAME: ${USER}
         USER_UID: ${UID:-1000}
         USER_GID: ${GID:-1000}
-        OCI_CLI_VERSION: ${OCI_CLI_VERSION:-3.54.3}
+        OCI_CLI_VERSION: ${OCI_CLI_VERSION:-3.54.4}
+        TERRAFORM_VERSION: ${TERRAFORM_VERSION:-1.11.4}
+        PYTHON_VERSION: ${PYTHON_VERSION:-3.12}
+    environment:
+      - PUID=${UID:-1000}
+      - PGID=${GID:-1000}
+      - USER_NAME=${USER}
 ```
 
 ## Included Tools
@@ -96,8 +130,9 @@ services:
 ### Core Components
 - Terraform
   - Version 1.11.4 (in Oracle Linux variant)
-- OCI CLI 3.54.3
+- OCI CLI 3.54.4
 - Python 3.12.5
+- gosu 1.16 (for secure user switching)
 
 ### Development Utilities
 - Git for version control
@@ -148,38 +183,24 @@ The Dockerfiles are optimized for build performance using efficient layer cachin
   * Maintains all other cached components
 
 ### Version Changes
-When changing OCI CLI version, only the installation layer will be rebuilt while maintaining other cached layers:
+You can customize tool versions through build arguments:
 ```bash
 docker build \
   -f Dockerfile \
   --build-arg USER_NAME=$(whoami) \
   --build-arg USER_UID=$(id -u) \
   --build-arg USER_GID=$(id -g) \
-  --build-arg OCI_CLI_VERSION=<new_version> \
-  -t ocs-oci-terraform:<base>-<new_version>
-  ```
+  --build-arg OCI_CLI_VERSION=3.54.4 \
+  --build-arg TERRAFORM_VERSION=1.11.4 \
+  --build-arg PYTHON_VERSION=3.12 \
+  -t ocs-oci-terraform:latest
+```
 
 ## Quick Start
 
-1. **Verify Configuration**
-   - Check that the `docker-compose.yml` file is using the Dockerfile9
-   - Make sure your environment is ready for Oracle Linux 9 based image
+### Option 1: Build and Run Locally
 
-2. **Generate Required Credentials**
-   - Generate SSH keys: [OCI SSH Key Generation Guide](https://docs.oracle.com/en-us/iaas/Content/GSG/Tasks/creatingkeys.htm)
-   ```bash
-   # [HOST] Generate SSH key pair
-   ssh-keygen -t rsa -b 4096 -f ${HOME}/Projects/customer01/.ssh/id_rsa
-   ```
-   
-   - Generate OCI API keys: [OCI API Signing Key Guide](https://docs.oracle.com/en-us/iaas/Content/API/Concepts/apisigningkey.htm)
-   ```bash
-   # [HOST] Generate OCI API key pair
-   openssl genrsa -out ${HOME}/Projects/customer01/.oci/oci_api_key.pem 4096
-   openssl rsa -pubout -in ${HOME}/Projects/customer01/.oci/oci_api_key.pem -out ${HOME}/Projects/customer01/.oci/oci_api_key_public.pem
-   ```
-
-3. **Prepare Directory Structure**
+1. **Prepare Directory Structure**
    ```bash
    # [HOST] Create required directory structure
    mkdir -p ${HOME}/Projects/customer01/{.oci,.ssh}
@@ -188,21 +209,38 @@ docker build \
    touch ${HOME}/Projects/customer01/.bashrc
    touch ${HOME}/Projects/customer01/.bash_history
    ```
-   Note: We use ${HOME}/Projects/customer01 as an example path in the docker host that will be mounted as ~/ in the container.
 
-4. **Configure Environment**
+2. **Configure Environment**
    ```bash
    # [HOST] Copy .env file before start container
    cp .env.example .env
    # Edit .env with your OCI credentials
    ```
 
-5. **Launch Toolkit**
+3. **Build and Launch Toolkit**
    ```bash
+   # Build the image and start container
+   docker compose build
+   docker compose up -d
+   
+   # Or in one command:
+   docker compose up -d --build
+   ```
+
+### Option 2: Use from Registry
+
+1. **Pull Image from Registry**
+   ```bash
+   # Modify docker-compose.yml to point to your registry
+   # Then pull the image
+   docker compose pull
+   ```
+
+2. **Run with Local User Permissions**
+   ```bash
+   # The container will automatically use your UID/GID
    docker compose up -d
    ```
-   The first time you run this command, it will build the image automatically. 
-   Subsequent runs will reuse the existing image unless you explicitly rebuild it.
 
 ## Multi-tenant Support
 
@@ -239,10 +277,13 @@ You can create similar directories for different customers and modify the volume
 ### Optional Environment Variables
 - `TF_VAR_region`: Override default region
 - `TF_VAR_private_key_path`: Custom private key path
+- `PUID`: User ID for container (defaults to current user's UID)
+- `PGID`: Group ID for container (defaults to current user's GID)
 
 ## Security Features
 
 - Non-root user execution
+- Dynamic user mapping via gosu
 - Host-mounted credentials
 - Secure volume management
 - Environment-based configuration
@@ -253,9 +294,9 @@ You can create similar directories for different customers and modify the volume
 .
 ├── doc                    # Some documentation files and images
 ├── .bashrc                # .bashrc example for use inside container
-├── Dockerfile            # Oracle Linux 9 image definition  
+├── Dockerfile             # Oracle Linux 9 image definition  
 ├── docker-compose.yml     # Container orchestration
-├── entrypoint.sh          # Initialization script
+├── entrypoint.sh          # Initialization script with dynamic UID/GID mapping
 ├── .env.example           # Environment template
 └── README.md              # Documentation
 ```
@@ -264,6 +305,7 @@ You can create similar directories for different customers and modify the volume
 
 When the container starts, the entrypoint script displays comprehensive information including:
 - Environment Configuration
+- User details (UID/GID)
 - Region and Tenancy details
 - Installed Tools Versions
 - Terraform version
