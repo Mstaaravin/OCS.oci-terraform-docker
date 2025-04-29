@@ -3,40 +3,62 @@
 ################################################################################
 # Author: [Marvin] Carlos Miranda Molina
 # Created: February 2025
-# Last Modified: February 11, 2025
+# Last Modified: April 28, 2025
 #
 # Description:
 # Defines a containerized development environment for Oracle Cloud Infrastructure
 # using Terraform. This configuration ensures consistent permissions and access
-# to required resources across host and container.
+# to required resources across host and container through dynamic UID/GID mapping.
+#
+# Features:
+# - Dynamic UID/GID mapping allows the image to run with any user permissions
+# - Uses gosu for proper privilege de-escalation when switching users
+# - Configurable tool versions via environment variables
 #
 # Prerequisites:
 # - Docker Engine
 # - Valid OCI credentials
 #
-# Installation:
-# 1. cp .env.example .env
-# 2. Configure credentials in .env:
+# Basic Installation steps: (on docker host)
+# 1. git clone https://github.com/Mstaaravin/OCS.oci-terraform-docker.git ${HOME}/Projects/customer01
+# 2. mv .env.example .env
+# 3. Configure credentials in .env:
 #    - Required: TF_VAR_TENANCY_OCID, TF_VAR_USER_OCID, TF_VAR_FINGERPRINT
 #    - Optional: TF_VAR_REGION (default: sa-bogota-1), TF_VAR_PRIVATE_KEY_PATH
-# 3. mkdir -p ${HOME}/Projects/customer01/{.oci,.ssh}
-# 4. docker compose up -d
+#    - For dynamic user mapping: PUID, PGID (defaults to current user if not specified)
+# 4. docker compose build
+# 5. docker compose up -d
+#
+# Usage options:
+# Option 1: Build and run locally
+#   docker compose build     # Build the image locally with your UID/GID
+#   docker compose up -d     # Start container with your user permissions
+#
+# Option 2: Use from registry
+#   Modify image: tag to point to your registry
+#   docker compose pull      # Pull pre-built image
+#   docker compose up -d     # Container will run with your UID/GID despite being built elsewhere
+#
+# Option 3: Combined action 
+#   docker compose up -d --build   # Both build and run in one command
+#
 ################################################################################
 ---
 services:
 
-  container03:
-    image: ocs-oci-terraform:3.54.3
+  customer01:
+    image: ocs-oci-terraform:tag
     build:
       context: .
       args:
-        USER_NAME: ${USER}
+        USER_NAME: opc
         USER_UID: ${UID:-1000}
-        USER_GID: ${GID:-1000}
+        USER_GID: ${GID:-1001}
         OCI_CLI_VERSION: ${OCI_CLI_VERSION:-3.54.3}
-    container_name: container03
-    hostname: container03
-    user: ${USER}:${USER}
+        TERRAFORM_VERSION: ${TERRAFORM_VERSION:-1.11.4}
+        PYTHON_VERSION: ${PYTHON_VERSION:-3.12}
+    container_name: customer01
+    hostname: customer01
     stdin_open: true
     tty: true
     env_file:
@@ -65,10 +87,15 @@ services:
     restart: unless-stopped
 
 
-
 ################################################################################
 # Security Notes:
-# - Container runs as non-root user
-# - Sensitive data in volume mounts and .env (not version controlled) rename .env.example to .env
+# - Container runs as non-root user with UID/GID matching the host user
+# - Dynamic user mapping (via gosu) solves the classic Docker permission problem:
+#   * When images are built, they typically contain users with fixed UIDs/GIDs
+#   * When these images are shared via a registry, users on different systems
+#     often have different UIDs/GIDs, causing permission issues with volumes
+#   * Our solution dynamically creates/modifies the container user at runtime
+#     to match the host user's UID/GID, ensuring proper file permissions
+# - Sensitive data in volume mounts and .env (not version controlled)
 # - Read-only mounts where appropriate
 ################################################################################
