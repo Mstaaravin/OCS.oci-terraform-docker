@@ -21,6 +21,7 @@
 - [Troubleshooting](#troubleshooting)
   - [Permission errors](#q-container-fails-to-start-with-permission-errors)
   - [Code changes not reflected](#q-changes-to-my-code-arent-reflected-in-the-container)
+  - [Mount errors with files and directories](#q-error-about-mounting-a-directory-onto-a-file-or-vice-versa)
 - [Performance](#performance)
   - [WSL impact](#q-is-there-a-performance-impact-using-wsl)
   - [Memory consumption](#q-will-the-container-consume-too-much-memory)
@@ -35,14 +36,14 @@
 - More familiar environment for OCI developers
 
 ### Q: Can I change the Terraform version?
-**A:** Yes, you can modify the Terraform version by changing the `TERRAFORM_VERSION` build argument in the Dockerfile9 or when building:
+**A:** Yes, you can modify the Terraform version by changing the `TERRAFORM_VERSION` build argument in the Dockerfile or when building:
 
 ```bash
-docker build -f Dockerfile9 \
+docker build -f Dockerfile \
   --build-arg USER_NAME=$(whoami) \
   --build-arg USER_UID=$(id -u) \
   --build-arg USER_GID=$(id -g) \
-  --build-arg TERRAFORM_VERSION=1.8.0 \
+  --build-arg TERRAFORM_VERSION=1.11.4 \
   -t ocs-oci-terraform:latest .
 ```
 
@@ -140,10 +141,10 @@ FileNotFoundError: [Errno 2] No such file or directory: '~/.oci/tenancyName.pem'
 **A:** Yes, but they won't persist after container restart. Add them to the appropriate Dockerfile for persistence.
 
 ### Q: How do I update Terraform/OCI CLI versions?
-**A:** Update the version tags in the Dockerfile9 file:
+**A:** Update the version tags in the Dockerfile file:
 ```dockerfile
-ARG OCI_CLI_VERSION=3.52
-ARG TERRAFORM_VERSION=1.7.5
+ARG OCI_CLI_VERSION=3.54.4
+ARG TERRAFORM_VERSION=1.11.4
 ```
 
 Alternatively, specify the versions when building:
@@ -167,6 +168,40 @@ id -g
 # [CONTAINER] List mounted volumes
 mount | grep home
 ```
+
+### Q: Error about mounting a directory onto a file (or vice-versa)
+**A:** You may encounter an error message similar to:
+
+```
+Error response from daemon: failed to create task for container: failed to create shim task: OCI runtime create failed: runc create failed: unable to start container process: error during container init: error mounting "/home/cmiranda/Nextcloud/Work/.bashrc" to rootfs at "/home/cmiranda/.bashrc": mount src=/home/cmiranda/Nextcloud/Work/.bashrc, dst=/home/cmiranda/.bashrc, dstFd=/proc/thread-self/fd/9, flags=0x5000: not a directory: unknown: Are you trying to mount a directory onto a file (or vice-versa)? Check if the specified host path exists and is the expected type
+```
+
+This occurs when you've configured a volume that attempts to mount a file to a directory (or vice-versa). A common scenario is when you're trying to mount a custom `.bashrc` file, but the path on one side doesn't exist or is of a different type.
+
+**Solution:**
+
+1. Ensure that the source file exists on your host system:
+   ```bash
+   touch ${HOME}/Projects/customer01/.bashrc
+   ```
+
+2. If the container has already been started once, remove the incorrectly created directory inside the container:
+   ```bash
+   docker exec -it <container_name> rm -rf /home/user/.bashrc
+   ```
+
+3. Verify your volume configuration in docker-compose.yml:
+   ```yaml
+   volumes:
+     # Correct path for mounting .bashrc
+     - ${HOME}/Projects/customer01/.bashrc:/home/${USER}/.bashrc
+   ```
+
+4. Restart your container:
+   ```bash
+   docker compose down
+   docker compose up -d
+   ```
 
 ## Performance
 
